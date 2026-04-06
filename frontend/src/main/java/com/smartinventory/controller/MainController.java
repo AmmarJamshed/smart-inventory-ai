@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class MainController implements Initializable {
@@ -95,9 +96,8 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Dispute, String>   dResolutionCol;
 
     // ── Services & State ──────────────────────────────────────────────────────
-    private ApiService      apiService;
-    private CppService      cppService;
-    private DatabaseService dbService;
+    private LocalEngineService engineService;
+    private DatabaseService    dbService;
 
     private final ObservableList<InventoryItem> inventoryData = FXCollections.observableArrayList();
     private final ObservableList<Dispute>       disputeData   = FXCollections.observableArrayList();
@@ -113,9 +113,8 @@ public class MainController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        apiService = new ApiService();
-        cppService = new CppService();
-        dbService  = new DatabaseService();
+        engineService = new LocalEngineService();
+        dbService     = new DatabaseService();
 
         setupInventoryTable();
         setupDisputesTable();
@@ -236,40 +235,10 @@ public class MainController implements Initializable {
             setStatus("Please enter an inventory message.", "error");
             return;
         }
-
-        setStatus("Parsing with AI...", "processing");
-
-        Task<ParsedResult> task = new Task<>() {
-            @Override
-            protected ParsedResult call() throws Exception {
-                return apiService.parseText(text);
-            }
-        };
-
-        task.setOnSucceeded(e -> showConfirmationDialog(task.getValue()));
-        task.setOnFailed(e -> {
-            Throwable ex = task.getException();
-            setStatus("AI offline — using fallback parser.", "error");
-            // Create basic result manually
-            ParsedResult fallback = buildFallbackResult(text);
-            showConfirmationDialog(fallback);
-        });
-
-        daemonThread(task);
-    }
-
-    private ParsedResult buildFallbackResult(String text) {
-        ParsedResult r = new ParsedResult();
-        String lower = text.toLowerCase();
-        r.setType(lower.contains("waste") || lower.contains("zaya") ? "waste"
-                : lower.contains("sold") || lower.contains("becha") ? "sold"
-                : "bought");
-        r.setItem("item");
-        r.setQuantity("1");
-        r.setPrice(0.0);
-        r.setSource("unknown");
-        r.setNeedsConfirmation(true);
-        return r;
+        setStatus("Parsing...", "processing");
+        ParsedResult result = NlpParser.parse(text);
+        setStatus("", "");
+        showConfirmationDialog(result);
     }
 
     private void showConfirmationDialog(ParsedResult result) {
@@ -436,29 +405,13 @@ public class MainController implements Initializable {
             return;
         }
 
-        Task<List<Recommendation>> task = new Task<>() {
-            @Override
-            protected List<Recommendation> call() throws Exception {
-                return cppService.getRecommendations(inventoryData);
-            }
-        };
-
-        task.setOnSucceeded(e -> {
-            recommendationPanel.getChildren().clear();
-            List<Recommendation> recs = task.getValue();
-            if (recs.isEmpty()) {
-                addEmptyMsg(recommendationPanel, "No recommendations available yet.");
-            } else {
-                recs.forEach(rec -> recommendationPanel.getChildren().add(buildRecommendationCard(rec)));
-            }
-        });
-
-        task.setOnFailed(e -> {
-            recommendationPanel.getChildren().clear();
-            addEmptyMsg(recommendationPanel, "C++ Engine offline — recommendations unavailable.");
-        });
-
-        daemonThread(task);
+        List<Recommendation> recs = engineService.getRecommendations(new ArrayList<>(inventoryData));
+        recommendationPanel.getChildren().clear();
+        if (recs.isEmpty()) {
+            addEmptyMsg(recommendationPanel, "No recommendations available yet.");
+        } else {
+            recs.forEach(rec -> recommendationPanel.getChildren().add(buildRecommendationCard(rec)));
+        }
     }
 
     private VBox buildRecommendationCard(Recommendation rec) {
@@ -515,31 +468,16 @@ public class MainController implements Initializable {
         try { targetPrice = Double.parseDouble(price.replaceAll("[^\\d.]", "")); } catch (Exception ignored) {}
         final double finalPrice = targetPrice;
 
-        Task<List<Recommendation>> task = new Task<>() {
-            @Override
-            protected List<Recommendation> call() throws Exception {
-                return cppService.findMatches(type, item, qty.isEmpty() ? "1" : qty, finalPrice);
+        List<Recommendation> matches = engineService.findMatches(
+            type, item, qty.isEmpty() ? "1" : qty, finalPrice);
+        matchesPanel.getChildren().clear();
+        if (matches.isEmpty()) {
+            addEmptyMsg(matchesPanel, "No matches found for: " + item);
+        } else {
+            for (int i = 0; i < matches.size(); i++) {
+                matchesPanel.getChildren().add(buildMatchCard(matches.get(i), i + 1));
             }
-        };
-
-        task.setOnSucceeded(e -> {
-            matchesPanel.getChildren().clear();
-            List<Recommendation> matches = task.getValue();
-            if (matches.isEmpty()) {
-                addEmptyMsg(matchesPanel, "No matches found for: " + item);
-            } else {
-                for (int i = 0; i < matches.size(); i++) {
-                    matchesPanel.getChildren().add(buildMatchCard(matches.get(i), i + 1));
-                }
-            }
-        });
-
-        task.setOnFailed(e -> {
-            matchesPanel.getChildren().clear();
-            addEmptyMsg(matchesPanel, "Matching engine offline. C++ service not running.");
-        });
-
-        daemonThread(task);
+        }
     }
 
     private HBox buildMatchCard(Recommendation match, int rank) {
@@ -715,27 +653,9 @@ public class MainController implements Initializable {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void startStatusPolling() {
-        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(15), e -> checkServiceStatus()));
-        timeline.setCycleCount(Animation.INDEFINITE);
-        timeline.play();
-        checkServiceStatus(); // immediate first check
-    }
-
-    private void checkServiceStatus() {
-        Task<boolean[]> task = new Task<>() {
-            @Override
-            protected boolean[] call() {
-                return new boolean[]{ apiService.checkHealth(), cppService.checkHealth() };
-            }
-        };
-
-        task.setOnSucceeded(e -> {
-            boolean[] up = task.getValue();
-            updateStatusDot(pythonStatusDot, pythonStatusLabel, up[0], "AI Service");
-            updateStatusDot(cppStatusDot,    cppStatusLabel,    up[1], "Engine");
-        });
-
-        daemonThread(task);
+        // All services are built-in — always online
+        updateStatusDot(pythonStatusDot, pythonStatusLabel, true, "NLP Engine");
+        updateStatusDot(cppStatusDot,    cppStatusLabel,    true, "Analytics");
     }
 
     private void updateStatusDot(Circle dot, Label label, boolean online, String name) {

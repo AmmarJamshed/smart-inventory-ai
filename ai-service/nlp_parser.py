@@ -51,9 +51,24 @@ ITEM_VOCAB = [
 
 
 def parse_inventory_text(text: str) -> dict:
-    """Main entry point: try Ollama first, then rule-based fallback."""
-    result = None
+    """
+    Main entry point. Priority:
+      1. Local bundled GGUF model (TinyLlama) — offline, no install needed
+      2. Ollama server (optional enhancement)
+      3. Rule-based parser (always works)
+    """
+    # 1. Try local GGUF model
+    try:
+        from local_model import parse_with_local_model
+        result = parse_with_local_model(text)
+        if result and _is_valid_result(result):
+            result["needs_confirmation"] = False
+            logger.info(f"Local model parsed: {result}")
+            return result
+    except Exception as e:
+        logger.debug(f"Local model skip: {e}")
 
+    # 2. Try Ollama (if running)
     try:
         result = _try_ollama_parse(text)
         if result and _is_valid_result(result):
@@ -61,8 +76,9 @@ def parse_inventory_text(text: str) -> dict:
             logger.info(f"Ollama parsed: {result}")
             return result
     except Exception as e:
-        logger.warning(f"Ollama unavailable ({e}), using rule-based parser")
+        logger.debug(f"Ollama unavailable: {e}")
 
+    # 3. Rule-based fallback
     result = _rule_based_parse(text)
     result["needs_confirmation"] = True
     logger.info(f"Rule-based parsed: {result}")

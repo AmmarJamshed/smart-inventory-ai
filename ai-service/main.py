@@ -113,7 +113,30 @@ class TradeSearchRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "Smart Inventory AI", "version": "1.0.0"}
+    try:
+        from local_model import get_model_status
+        model = get_model_status()
+    except Exception:
+        model = {"local_model_found": False}
+    return {
+        "status": "ok",
+        "service": "Smart Inventory AI",
+        "version": "1.0.0",
+        "model": model,
+    }
+
+
+@app.post("/model/download")
+async def download_model_endpoint():
+    """Download the bundled AI model (TinyLlama ~669 MB). Run once."""
+    try:
+        from local_model import download_model
+        import asyncio
+        loop = asyncio.get_event_loop()
+        path = await loop.run_in_executor(None, download_model)
+        return {"success": True, "path": str(path), "message": "Model ready"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Download failed: {e}")
 
 
 # ── NLP Parsing ───────────────────────────────────────────────────────────────

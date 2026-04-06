@@ -1,0 +1,42 @@
+# ─── Python ──────────────────────────────────────────────────────────────────
+ai-service/venv/
+ai-service/__pycache__/
+ai-service/*.pyc
+ai-service/*.pyo
+*.pyc
+__pycache__/
+*.egg-info/
+.env
+
+# ─── Java / Maven ─────────────────────────────────────────────────────────────
+frontend/target/
+*.class
+*.jar
+!dist/*.jar
+
+# ─── C++ ──────────────────────────────────────────────────────────────────────
+cpp-engine/build/
+cpp-engine/include/httplib.h
+cpp-engine/include/json.hpp
+*.exe
+*.obj
+*.o
+*.pdb
+
+# ─── Database (runtime data) ─────────────────────────────────────────────────
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# ─── IDE / OS ─────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+logs/

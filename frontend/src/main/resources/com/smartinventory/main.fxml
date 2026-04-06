@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane
+    xmlns="http://javafx.com/javafx/21"
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="com.smartinventory.controller.MainController"
+    styleClass="app-root">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         LEFT SIDEBAR
+    ═══════════════════════════════════════════════════════════════════ -->
+    <left>
+        <VBox styleClass="sidebar" spacing="0">
+
+            <!-- Logo -->
+            <VBox styleClass="sidebar-logo" alignment="CENTER" spacing="4">
+                <Label text="📦" style="-fx-font-size:38;"/>
+                <Label text="Smart Inventory" styleClass="logo-title"/>
+                <HBox alignment="CENTER">
+                    <Label text="AI" styleClass="logo-ai-badge"/>
+                </HBox>
+                <Label text="Turn messages into insights" styleClass="logo-tagline"/>
+            </VBox>
+
+            <!-- Navigation -->
+            <VBox styleClass="nav-section" VBox.vgrow="ALWAYS" spacing="4">
+                <Label text="MAIN MENU" styleClass="nav-section-label"/>
+                <Button fx:id="navDashboard" text="⊞   Dashboard"
+                        onAction="#showDashboard"
+                        styleClass="nav-btn, nav-active" maxWidth="Infinity"/>
+                <Button fx:id="navAnalytics" text="📊  Analytics"
+                        onAction="#showAnalytics"
+                        styleClass="nav-btn" maxWidth="Infinity"/>
+                <Button fx:id="navTrade" text="🤝  Trade"
+                        onAction="#showTrade"
+                        styleClass="nav-btn" maxWidth="Infinity"/>
+                <Button fx:id="navDisputes" text="⚖   Disputes"
+                        onAction="#showDisputes"
+                        styleClass="nav-btn" maxWidth="Infinity"/>
+
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <Label text="SETTINGS" styleClass="nav-section-label"/>
+                <Button fx:id="darkModeToggle" text="🌙  Dark Mode"
+                        onAction="#toggleDarkMode"
+                        styleClass="nav-btn" maxWidth="Infinity"/>
+            </VBox>
+
+            <!-- User Profile -->
+            <VBox styleClass="sidebar-user" alignment="CENTER" spacing="6">
+                <Label text="👤" style="-fx-font-size:28;"/>
+                <Label fx:id="userPseudonymLabel" text="Merchant #001" styleClass="user-pseudonym"/>
+                <Label fx:id="reputationLabel" text="★ 75.0 · Silver" styleClass="reputation-chip"/>
+            </VBox>
+
+        </VBox>
+    </left>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         TOP HEADER
+    ═══════════════════════════════════════════════════════════════════ -->
+    <top>
+        <HBox styleClass="app-header" alignment="CENTER_LEFT" spacing="16">
+            <Label fx:id="pageTitleLabel" text="Dashboard" styleClass="page-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Service status indicators -->
+            <HBox spacing="20" alignment="CENTER">
+                <HBox spacing="6" alignment="CENTER">
+                    <Circle fx:id="pythonStatusDot" radius="5" fill="#EF5350"/>
+                    <Label fx:id="pythonStatusLabel" text="AI Service ✗" styleClass="status-indicator"/>
+                </HBox>
+                <HBox spacing="6" alignment="CENTER">
+                    <Circle fx:id="cppStatusDot" radius="5" fill="#EF5350"/>
+                    <Label fx:id="cppStatusLabel" text="Engine ✗" styleClass="status-indicator"/>
+                </HBox>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         CENTER — Content Stack
+    ═══════════════════════════════════════════════════════════════════ -->
+    <center>
+        <StackPane styleClass="content-area">
+
+            <!-- ──────────────────────────────────────────────────────────
+                 DASHBOARD VIEW
+            ────────────────────────────────────────────────────────── -->
+            <ScrollPane fx:id="dashboardView" fitToWidth="true" styleClass="content-scroll">
+                <VBox spacing="18" styleClass="content-padding">
+
+                    <!-- Input Card -->
+                    <VBox styleClass="card" spacing="12">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Add Inventory" styleClass="card-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label text="EN / اردو" styleClass="lang-badge"/>
+                        </HBox>
+                        <TextArea fx:id="inputArea"
+                                  promptText="Type or paste: 'Bought 5kg chicken @ 650/kg'   or   'Aaj 2kg chicken zaya hogaya'"
+                                  styleClass="input-area"
+                                  prefRowCount="3"
+                                  wrapText="true"/>
+                        <HBox spacing="10" alignment="CENTER_RIGHT">
+                            <Label fx:id="statusLabel" text="" styleClass="status-label"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button text="Clear" onAction="#clearInput" styleClass="ghost-btn"/>
+                            <Button text="⚡  Parse &amp; Save" onAction="#processInput" styleClass="primary-btn"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Stat Cards -->
+                    <HBox spacing="14">
+                        <VBox styleClass="stat-card, stat-green" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Total Items" styleClass="stat-label"/>
+                            <Label fx:id="totalItemsLabel" text="0" styleClass="stat-value"/>
+                            <Label text="in inventory" styleClass="stat-sub"/>
+                        </VBox>
+                        <VBox styleClass="stat-card, stat-orange" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Waste Count" styleClass="stat-label"/>
+                            <Label fx:id="wasteCountLabel" text="0" styleClass="stat-value"/>
+                            <Label text="items wasted" styleClass="stat-sub"/>
+                        </VBox>
+                        <VBox styleClass="stat-card, stat-blue" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Total Value" styleClass="stat-label"/>
+                            <Label fx:id="totalValueLabel" text="₨0" styleClass="stat-value"/>
+                            <Label text="purchased" styleClass="stat-sub"/>
+                        </VBox>
+                        <VBox styleClass="stat-card, stat-teal" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Today" styleClass="stat-label"/>
+                            <Label fx:id="todayCountLabel" text="0" styleClass="stat-value"/>
+                            <Label text="entries" styleClass="stat-sub"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Inventory Table Card -->
+                    <VBox styleClass="card" spacing="12" VBox.vgrow="ALWAYS">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Inventory Records" styleClass="card-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button text="⟳  Refresh" onAction="#refreshTable" styleClass="ghost-btn"/>
+                        </HBox>
+                        <TableView fx:id="inventoryTable" prefHeight="280"
+                                   styleClass="inventory-table" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="typeCol"      text="Type"      prefWidth="110"/>
+                                <TableColumn fx:id="itemCol"      text="Item"      prefWidth="120"/>
+                                <TableColumn fx:id="quantityCol"  text="Quantity"  prefWidth="100"/>
+                                <TableColumn fx:id="priceCol"     text="Price"     prefWidth="100"/>
+                                <TableColumn fx:id="sourceCol"    text="Source"    prefWidth="110"/>
+                                <TableColumn fx:id="timestampCol" text="Timestamp" prefWidth="155"/>
+                            </columns>
+                        </TableView>
+                    </VBox>
+
+                    <!-- AI Recommendations Card -->
+                    <VBox styleClass="card" spacing="12">
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="AI Recommendations" styleClass="card-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label text="Powered by C++ Engine" styleClass="engine-badge"/>
+                        </HBox>
+                        <VBox fx:id="recommendationPanel" spacing="8">
+                            <Label text="Add inventory to receive AI-powered trade recommendations."
+                                   styleClass="empty-hint"/>
+                        </VBox>
+                    </VBox>
+
+                </VBox>
+            </ScrollPane>
+
+            <!-- ──────────────────────────────────────────────────────────
+                 ANALYTICS VIEW
+            ────────────────────────────────────────────────────────── -->
+            <ScrollPane fx:id="analyticsView" fitToWidth="true"
+                        styleClass="content-scroll" visible="false" managed="false">
+                <VBox spacing="18" styleClass="content-padding">
+
+                    <!-- Waste Stats -->
+                    <HBox spacing="14">
+                        <VBox styleClass="stat-card, stat-orange" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Waste %" styleClass="stat-label"/>
+                            <Label fx:id="wastePctLabel" text="0%" styleClass="stat-value"/>
+                            <Label text="of all items" styleClass="stat-sub"/>
+                        </VBox>
+                        <VBox styleClass="stat-card, stat-red" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Lost Value" styleClass="stat-label"/>
+                            <Label fx:id="lostValueLabel" text="₨0" styleClass="stat-value"/>
+                            <Label text="from waste" styleClass="stat-sub"/>
+                        </VBox>
+                        <VBox styleClass="stat-card, stat-blue" HBox.hgrow="ALWAYS" spacing="4">
+                            <Label text="Waste Items" styleClass="stat-label"/>
+                            <Label fx:id="avgWasteLabel" text="0" styleClass="stat-value"/>
+                            <Label text="total wasted" styleClass="stat-sub"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Charts Row -->
+                    <HBox spacing="14">
+                        <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="10">
+                            <Label text="Inventory by Type" styleClass="card-title"/>
+                            <PieChart fx:id="categoryPieChart"
+                                      prefHeight="260"
+                                      legendSide="BOTTOM"
+                                      labelsVisible="true"/>
+                        </VBox>
+                        <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="10">
+                            <Label text="Daily Activity (Last 7 Days)" styleClass="card-title"/>
+                            <BarChart fx:id="dailyBarChart" prefHeight="260"
+                                      animated="true" legendVisible="false">
+                                <xAxis>
+                                    <CategoryAxis label="Day"/>
+                                </xAxis>
+                                <yAxis>
+                                    <NumberAxis label="Items" minorTickVisible="false"/>
+                                </yAxis>
+                            </BarChart>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Trend Line Chart -->
+                    <VBox styleClass="card" spacing="10">
+                        <Label text="Purchase Value Trend (Last 7 Days)" styleClass="card-title"/>
+                        <LineChart fx:id="trendLineChart" prefHeight="200"
+                                   animated="true" legendVisible="false"
+                                   createSymbols="true">
+                            <xAxis>
+                                <CategoryAxis label="Day"/>
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis label="Value (₨)" minorTickVisible="false"/>
+                            </yAxis>
+                        </LineChart>
+                    </VBox>
+
+                </VBox>
+            </ScrollPane>
+
+            <!-- ──────────────────────────────────────────────────────────
+                 TRADE VIEW
+            ────────────────────────────────────────────────────────── -->
+            <ScrollPane fx:id="tradeView" fitToWidth="true"
+                        styleClass="content-scroll" visible="false" managed="false">
+                <VBox spacing="18" styleClass="content-padding">
+
+                    <!-- Privacy notice -->
+                    <HBox styleClass="info-banner" spacing="10" alignment="CENTER_LEFT">
+                        <Label text="🔒" style="-fx-font-size:16;"/>
+                        <Label text="Privacy-preserving B2B matching — only pseudonyms are shown. Your real identity remains encrypted."
+                               styleClass="info-banner-text" wrapText="true"/>
+                    </HBox>
+
+                    <!-- Post Trade Card -->
+                    <VBox styleClass="card" spacing="14">
+                        <Label text="Find Trade Matches" styleClass="card-title"/>
+                        <GridPane hgap="14" vgap="12">
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="ALWAYS" percentWidth="30"/>
+                                <ColumnConstraints hgrow="ALWAYS" percentWidth="35"/>
+                                <ColumnConstraints hgrow="ALWAYS" percentWidth="35"/>
+                            </columnConstraints>
+
+                            <Label text="I want to:" styleClass="form-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Item:" styleClass="form-label"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Quantity:" styleClass="form-label"
+                                   GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+
+                            <ComboBox fx:id="tradeTypeCombo"
+                                      maxWidth="Infinity" styleClass="input-field"
+                                      GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="tradeItemField"
+                                       promptText="e.g. chicken, beef, rice"
+                                       styleClass="input-field" maxWidth="Infinity"
+                                       GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <TextField fx:id="tradeQtyField"
+                                       promptText="e.g. 10kg, 50 dozen"
+                                       styleClass="input-field" maxWidth="Infinity"
+                                       GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+
+                            <Label text="Target Price/unit (optional):" styleClass="form-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="2"
+                                   GridPane.columnSpan="2"/>
+
+                            <TextField fx:id="tradePriceField"
+                                       promptText="₨ per unit (e.g. 650)"
+                                       styleClass="input-field" maxWidth="Infinity"
+                                       GridPane.columnIndex="0" GridPane.rowIndex="3"
+                                       GridPane.columnSpan="2"/>
+                            <Button text="🔍  Find Matches" onAction="#findTradeMatches"
+                                    styleClass="primary-btn" maxWidth="Infinity"
+                                    GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                        </GridPane>
+                    </VBox>
+
+                    <!-- Matches Results -->
+                    <VBox styleClass="card" spacing="12">
+                        <Label text="Best Matches" styleClass="card-title"/>
+                        <VBox fx:id="matchesPanel" spacing="10">
+                            <Label text="Post a trade offer above to see your best matches."
+                                   styleClass="empty-hint"/>
+                        </VBox>
+                    </VBox>
+
+                </VBox>
+            </ScrollPane>
+
+            <!-- ──────────────────────────────────────────────────────────
+                 DISPUTES VIEW
+            ────────────────────────────────────────────────────────── -->
+            <ScrollPane fx:id="disputesView" fitToWidth="true"
+                        styleClass="content-scroll" visible="false" managed="false">
+                <VBox spacing="18" styleClass="content-padding">
+
+                    <!-- Blockchain notice -->
+                    <HBox styleClass="info-banner" spacing="10" alignment="CENTER_LEFT">
+                        <Label text="🔗" style="-fx-font-size:16;"/>
+                        <Label text="Blockchain-ready: every transaction is SHA-256 hashed. Dispute evidence is stored immutably for tamper-proof resolution."
+                               styleClass="info-banner-text" wrapText="true"/>
+                    </HBox>
+
+                    <!-- Open Dispute Card -->
+                    <VBox styleClass="card" spacing="14">
+                        <Label text="File a Dispute" styleClass="card-title"/>
+                        <GridPane hgap="14" vgap="10">
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="ALWAYS" percentWidth="55"/>
+                                <ColumnConstraints hgrow="ALWAYS" percentWidth="45"/>
+                            </columnConstraints>
+
+                            <Label text="Transaction ID:" styleClass="form-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="disputeTxIdField"
+                                       promptText="e.g. TX-A1B2C3D4E5F6"
+                                       styleClass="input-field" maxWidth="Infinity"
+                                       GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <Button text="🔍  Lookup TX" onAction="#lookupTransaction"
+                                    styleClass="ghost-btn"
+                                    GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                            <Label text="Evidence / Issue Description:" styleClass="form-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="2"
+                                   GridPane.columnSpan="2"/>
+                            <TextArea fx:id="evidenceArea"
+                                      promptText="Describe the issue clearly with dates, amounts, and what went wrong..."
+                                      styleClass="input-area"
+                                      prefRowCount="4"
+                                      wrapText="true"
+                                      GridPane.columnIndex="0" GridPane.rowIndex="3"
+                                      GridPane.columnSpan="2"/>
+
+                            <Button text="⚖  Submit Dispute" onAction="#submitDispute"
+                                    styleClass="primary-btn"
+                                    GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        </GridPane>
+                    </VBox>
+
+                    <!-- Disputes Table -->
+                    <VBox styleClass="card" spacing="12" VBox.vgrow="ALWAYS">
+                        <Label text="My Disputes" styleClass="card-title"/>
+                        <TableView fx:id="disputesTable" prefHeight="240"
+                                   styleClass="inventory-table" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="dIdCol"         text="Dispute ID"   prefWidth="140"/>
+                                <TableColumn fx:id="dTxCol"         text="Transaction"  prefWidth="160"/>
+                                <TableColumn fx:id="dStatusCol"     text="Status"       prefWidth="120"/>
+                                <TableColumn fx:id="dResolutionCol" text="Resolution"   prefWidth="220"/>
+                            </columns>
+                        </TableView>
+                    </VBox>
+
+                </VBox>
+            </ScrollPane>
+
+        </StackPane>
+    </center>
+
+</BorderPane>
